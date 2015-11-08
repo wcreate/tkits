@@ -16,10 +16,54 @@ var (
 	scrypto *Crypto
 )
 
+var (
+	WebDomain   = ""
+	WebName     = ""
+	WebIntro    = ""
+	WebListenIP = ""
+	WebPort     = 8080
+	EmailUser   = ""
+	EmailHost   = ""
+	EmailPasswd = ""
+)
+
+// initialize by the secure config
 func init() {
 	macaron.SetConfig(GetCfgFile())
 	cfg = macaron.Config()
 
+	getWebCfg()
+	getSecureCfg()
+	getEmailCfg()
+}
+
+func getWebCfg() {
+	web, err := cfg.GetSection("web")
+	if err != nil {
+		panic(err)
+	}
+
+	WebListenIP = web.Key("ip").MustString("0.0.0.0")
+	WebPort = web.Key("port").MustInt(8080)
+	WebDomain = web.Key("domain").MustString("localhost")
+	WebName = web.Key("name").String()
+	WebIntro = web.Key("intro").String()
+	log.Debug("web.domain=", WebDomain)
+	log.Debug("web.name=", WebName)
+	log.Debug("web.intro=", WebIntro)
+}
+
+func getEmailCfg() {
+	email, err := cfg.GetSection("email")
+	if err != nil {
+		EmailUser = email.Key("user").String()
+		EmailHost = email.Key("host").String()
+		EmailPasswd = email.Key("password").String()
+		EmailPasswd, _ = scrypto.DecryptStr(EmailPasswd)
+	}
+}
+
+func getSecureCfg() {
 	secure, err := cfg.GetSection("secure")
 	if err != nil {
 		panic(err)
@@ -28,7 +72,6 @@ func init() {
 	factor := secure.Key("factor").String()
 	crc := secure.Key("crc").String()
 	expire := secure.Key("token").MustFloat64(15.0)
-	//println(factor, crc)
 
 	scrypto, err = NewCrypto(factor, crc)
 	if err != nil {
@@ -38,12 +81,15 @@ func init() {
 	stoken = NewSimpleToken(scrypto, expire)
 }
 
+// Get the config path
 func GetCfgFile() string {
 	workPath, _ := os.Getwd()
 	workPath, _ = filepath.Abs(workPath)
+
 	// initialize default configurations
 	appPath, _ := filepath.Abs(filepath.Dir(os.Args[0]))
 	configPath := filepath.Join(appPath, "conf", "app.ini")
+
 	if workPath != appPath {
 		if FileExists(configPath) {
 			os.Chdir(appPath)
@@ -53,6 +99,7 @@ func GetCfgFile() string {
 			configPath = filepath.Join(workPath, "../conf", "app.ini")
 		}
 	}
+
 	log.Debug("config path=", configPath)
 	return configPath
 }
@@ -66,10 +113,12 @@ func FileExists(name string) bool {
 	return true
 }
 
+// retrive the SimpleToken using defalt config
 func GetSimpleToken() *SimpleToken {
 	return stoken
 }
 
+// retrive the Crypto using defalt config
 func GetCrypto() *Crypto {
 	return scrypto
 }

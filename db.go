@@ -12,13 +12,19 @@ import (
 )
 
 var (
-	dbname      = "default" // 数据库别名
-	webcfg      *ini.Section
-	dbconnected = false
+	webcfg *ini.Section
+
+	dbname   = "default" // database alias
+	dbinited = false
+	dbtype   = "mysql"
+	dburl    = ""
+	maxidle  = 2
+	maxconn  = 2
 )
 
-func ConnectDB() {
-	if dbconnected {
+// initialize the db driver and config
+func InitDB() {
+	if dbinited {
 		return
 	}
 	// 设置为 UTC 时间
@@ -31,7 +37,7 @@ func ConnectDB() {
 	}
 	webcfg = web
 
-	dbtype := web.Key("dbtype").String()
+	dbtype = web.Key("dbtype").String()
 	log.Debugf("DB type is %s", dbtype)
 	dbcfg, err := cfg.GetSection(dbtype)
 	if err != nil {
@@ -51,30 +57,36 @@ func ConnectDB() {
 		}
 
 		url := dbcfg.Key("url").String()
-		maxidle := dbcfg.Key("maxidle").MustInt(2)
-		maxconn := dbcfg.Key("maxconn").MustInt(2)
-		orm.RegisterDriver("mysql", orm.DR_MySQL)
-		orm.RegisterDataBase(dbname, "mysql",
-			username+":"+password+"@"+url,
-			maxidle, maxconn)
+		maxidle = dbcfg.Key("maxidle").MustInt(2)
+		maxconn = dbcfg.Key("maxconn").MustInt(2)
+		dburl = username + ":" + password + "@" + url
+		orm.RegisterDriver(dbtype, orm.DR_MySQL)
 	case "sqlite":
-		url := dbcfg.Key("url").String()
-		orm.RegisterDriver("sqlite3", orm.DR_Sqlite)
-		orm.RegisterDataBase(dbname, "sqlite3", url)
+		dburl = dbcfg.Key("url").String()
+		dbtype = "sqlite3"
+		orm.RegisterDriver(dbtype, orm.DR_Sqlite)
 	}
 
-	dbconnected = true
+	dbinited = true
 }
 
+// Connect to db and try to sync table structs
 func SyncDB() {
-	force := false                         // drop table 后再建表
-	sqllog := webcfg.Key("sqlon").String() // 打印执行过程
+
+	// try to connnet to db
+	if err := orm.RegisterDataBase(dbname, dbtype, dburl, maxidle, maxconn); err != nil {
+		panic(err)
+	}
+
+	// create the tables
+	force := false                         // drop table then create it
+	sqllog := webcfg.Key("sqlon").String() // log the sql string
 	verbose := false
 	if "on" == sqllog {
 		verbose = true
 	}
 
-	// 遇到错误立即返回
+	// try to sync table structs
 	err := orm.RunSyncdb(dbname, force, verbose)
 	if err != nil {
 		log.Error(err.Error())
