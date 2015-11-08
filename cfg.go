@@ -71,7 +71,7 @@ func getSecureCfg() {
 
 	factor := secure.Key("factor").String()
 	crc := secure.Key("crc").String()
-	expire := secure.Key("token").MustFloat64(15.0)
+	expire := secure.Key("tokenexpire").MustFloat64(15.0)
 
 	scrypto, err = NewCrypto(factor, crc)
 	if err != nil {

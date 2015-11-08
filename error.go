@@ -2,27 +2,27 @@ package tkits
 
 var (
 	INVALID_URL = Error{
-		"invalid url!",
+		"invalid_url",
 		"url is invalid or method is not correct.",
 	}
 
 	INVALID_AUTH = Error{
-		"invalid request!",
-		"not found Authorization in header or the value is invalid.",
+		"invalid_token",
+		"not found token in header or the value is invalid.",
 	}
 
 	INVALID_BODY = Error{
-		"invalid request!",
+		"invalid_request",
 		"request body is not correct for this url.",
 	}
 
 	DB_ERROR = Error{
-		"system error!",
+		"system_error",
 		"operate db failed.",
 	}
 
 	SYS_ERROR = Error{
-		"system error!",
+		"system_error",
 		"unkown error.",
 	}
 )

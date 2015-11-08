@@ -50,7 +50,7 @@ func (st *SimpleToken) GenToken(clientip, uid string) (string, error) {
 	}
 }
 
-func (st *SimpleToken) Validate(token string, clientip, uid string) bool {
+func (st *SimpleToken) Validate(token string, clientip, uid string, vtime bool) bool {
 	bs, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
 		return false
@@ -73,6 +73,11 @@ func (st *SimpleToken) Validate(token string, clientip, uid string) bool {
 	buf.Read([]byte(ip))
 	if !ip.Equal(net.ParseIP(clientip)) {
 		return false
+	}
+	
+	// no need to validate whether the time is expired
+	if !vtime {
+		return true
 	}
 
 	var ct time.Time
