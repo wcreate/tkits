@@ -1,8 +1,8 @@
 package tkits
 
 import (
-	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -17,25 +17,33 @@ func CheckAuth(ctx *macaron.Context, uid int64) bool {
 	// firstly retrive the cookie
 	suid := ctx.GetCookie("uid")
 	token := ctx.GetCookie("token")
-	vtime := true
 	log.Debugf("retrive uid = %s, token = % from cookie", suid, token)
 
-	ssuid := fmt.Sprintf("%v", uid)
-	// only check the time expire if token not exits in cookie
-	if suid != "" && token != "" {
-		vtime = false
+	vtime := true // only check the time expire if token not exits in cookie
+	iuid := uid
 
-		if ssuid != suid {
+	// 1. login user
+	if suid != "" && token != "" {
+		vtime = false // existed cookie, not check expire
+		if isuid, err := strconv.ParseInt(suid, 10, 0); err != nil {
 			ctx.JSON(http.StatusUnauthorized, INVALID_AUTH)
 			return false
+		} else {
+			if iuid != isuid {
+				ctx.JSON(http.StatusUnauthorized, INVALID_AUTH)
+				return false
+			}
 		}
 	} else {
 		token = strings.TrimSpace(ctx.Header().Get("Authorization"))
-		suid = ssuid
 		log.Debugf("retrive token = % from header", token)
 	}
 
-	if !GetSimpleToken().Validate(token, ctx.RemoteAddr(), suid, vtime) {
+	if uid == -1 {
+		vtime = false // system user, not check expire
+	}
+
+	if !GetSimpleToken().Validate(token, ctx.RemoteAddr(), iuid, vtime) {
 		ctx.JSON(http.StatusUnauthorized, INVALID_AUTH)
 		return false
 	}
