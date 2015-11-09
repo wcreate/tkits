@@ -12,7 +12,6 @@ import (
 
 var (
 	cfg     *ini.File
-	stoken  *SimpleToken
 	scrypto *Crypto
 )
 
@@ -22,9 +21,12 @@ var (
 	WebIntro    = ""
 	WebListenIP = ""
 	WebPort     = 8080
+
 	EmailUser   = ""
 	EmailHost   = ""
 	EmailPasswd = ""
+
+	TokenExpire = 15
 )
 
 // initialize by the secure config
@@ -71,14 +73,12 @@ func getSecureCfg() {
 
 	factor := secure.Key("factor").String()
 	crc := secure.Key("crc").String()
-	expire := secure.Key("tokenexpire").MustInt64(15)
+	TokenExpire = secure.Key("tokenexpire").MustInt(15)
 
 	scrypto, err = NewCrypto(factor, crc)
 	if err != nil {
 		panic(err)
 	}
-
-	stoken = NewSimpleToken(scrypto, expire)
 }
 
 // Get the config path
@@ -111,11 +111,6 @@ func FileExists(name string) bool {
 		}
 	}
 	return true
-}
-
-// retrive the SimpleToken using defalt config
-func GetSimpleToken() *SimpleToken {
-	return stoken
 }
 
 // retrive the Crypto using defalt config
